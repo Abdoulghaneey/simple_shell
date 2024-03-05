@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-#0x16. C - Simple Shell
-=======
 0x16. C - Simple Shell
 ======================
 
@@ -373,6 +370,3 @@ Write a blog post describing step by step what happens when you type `ls -l *.c`
 When done, please add all urls below (blog post, LinkedIn post, etc.)
 
 #### Add URLs here:
-# simple_shell
-# simple_shell
->>>>>>> 313cda82294dda63bc4c980def924c34798fa0ca
