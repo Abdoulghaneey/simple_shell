@@ -1,48 +1,86 @@
-#include <unistd.h>
 #include "shell.h"
-#include "parser.h"
-#include "scanner.h"
-#include "node.h"
-#include "source.h"
 
-
-struct node_s *parse_simple_command(struct token_s *tok)
+/**
+ * is_cmd - determines if a file is an executable command
+ * @info: the info struct
+ * @path: path to the file
+ *
+ * Return: 1 if true, 0 otherwise
+ */
+int is_cmd(info_t *info, char *path)
 {
-    if(!tok)
-    {
-        return NULL;
-    }
-    
-    struct node_s *cmd = new_node(NODE_COMMAND);
-    if(!cmd)
-    {
-        free_token(tok);
-        return NULL;
-    }
-    
-    struct source_s *src = tok->src;
-    
-    do
-    {
-        if(tok->text[0] == '\n')
-        {
-            free_token(tok);
-            break;
-        }
+	struct stat st;
 
-        struct node_s *word = new_node(NODE_VAR);
-        if(!word)
-        {
-            free_node_tree(cmd);
-            free_token(tok);
-            return NULL;
-        }
-        set_node_val_str(word, tok->text);
-        add_child_node(cmd, word);
+	(void)info;
+	if (!path || stat(path, &st))
+		return (0);
 
-        free_token(tok);
+	if (st.st_mode & S_IFREG)
+	{
+		return (1);
+	}
+	return (0);
+}
 
-    } while((tok = tokenize(src)) != &eof_token);
+/**
+ * dup_chars - duplicates characters
+ * @pathstr: the PATH string
+ * @start: starting index
+ * @stop: stopping index
+ *
+ * Return: pointer to new buffer
+ */
+char *dup_chars(char *pathstr, int start, int stop)
+{
+	static char buf[1024];
+	int i = 0, k = 0;
 
-    return cmd;
+	for (k = 0, i = start; i < stop; i++)
+		if (pathstr[i] != ':')
+			buf[k++] = pathstr[i];
+	buf[k] = 0;
+	return (buf);
+}
+
+/**
+ * find_path - finds this cmd in the PATH string
+ * @info: the info struct
+ * @pathstr: the PATH string
+ * @cmd: the cmd to find
+ *
+ * Return: full path of cmd if found or NULL
+ */
+char *find_path(info_t *info, char *pathstr, char *cmd)
+{
+	int i = 0, curr_pos = 0;
+	char *path;
+
+	if (!pathstr)
+		return (NULL);
+	if ((_strlen(cmd) > 2) && starts_with(cmd, "./"))
+	{
+		if (is_cmd(info, cmd))
+			return (cmd);
+	}
+	while (1)
+	{
+		if (!pathstr[i] || pathstr[i] == ':')
+		{
+			path = dup_chars(pathstr, curr_pos, i);
+			if (!*path)
+				_strcat(path, cmd);
+			else
+			{
+				_strcat(path, "/");
+				_strcat(path, cmd);
+			}
+			if (is_cmd(info, path))
+				return (path);
+			if (!pathstr[i])
+				break;
+			curr_pos = i;
+		}
+		i++;
+	}
+	return (NULL);
 }
