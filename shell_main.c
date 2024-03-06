@@ -1,63 +1,49 @@
 #include "shell.h"
-
-
-	char **commands = NULL;
-	char *line = NULL;
-	char *shell_name = NULL;
-	int status = 0;
-
 /**
- * main - the main shell code
- * @argc: number of arguments passed
- * @argv: program arguments to be parsed
- *
- * applies the functions in utils and helpers
- * implements EOF
- * Prints error on Failure
- * Return: 0 on success
+ * main - Start of shell prog
+ * @argc: argc
+ * @argv: Argv
+ * Return: cond_ret
  */
-
-
-int main(int argc __attribute__((unused)), char **argv)
+int main(__attribute__((unused)) int argc, char **argv)
 {
-	char **current_command = NULL;
-	int i, type_command = 0;
-	size_t n = 0;
+	char *us_input, **cmd, **cmds;
+	int cnt = 0, m, cond = 1, stat = 0;
 
-	signal(SIGINT, ctrl_c_handler);
-	shell_name = argv[0];
-	while (1)
+	if (argv[1] != NULL)
+		read_file(argv[1], argv);
+	signal(SIGINT, treat_signal);
+	while (cond)
 	{
-		non_interactive();
-		print(" ($) ", STDOUT_FILENO);
-		if (getline(&line, &n, stdin) == -1)
+		cnt++;
+		if (isatty(STDIN_FILENO))
+			cmd_prompt();
+		us_input = _getline();
+		if (us_input[0] == '\0')
+			continue;
+		cmd_history(us_input);
+		cmds = sep_cmds(us_input);
+		for (m = 0; cmds[m] != NULL; m++)
 		{
-			free(line);
-			exit(status);
-		}
-			remove_newline(line);
-			remove_comment(line);
-			commands = tokenizer(line, ";");
-
-		for (i = 0; commands[i] != NULL; i++)
-		{
-			current_command = tokenizer(commands[i], " ");
-			if (current_command[0] == NULL)
+			cmd = parse_cmd(cmds[m]);
+			if (_strngcmp(cmd[0], "exit") == 0)
 			{
-				free(current_command);
-				break;
+				free(cmds);
+				builtin_exit(cmd, us_input, argv, cnt, stat);
 			}
-			type_command = parse_command(current_command[0]);
-
-			/* initializer -   */
-			initializer(current_command, type_command);
-			free(current_command);
+			else if (builtin_chk(cmd) == 0)
+			{
+				stat = builtin_handle(cmd, stat);
+				free(cmd);
+				continue;
+			}
+			else
+				stat = check_cmd(cmd, us_input, cnt, argv);
+			free(cmd);
 		}
-		free(commands);
+		free(us_input);
+		free(cmds);
+		wait(&stat);
 	}
-	free(line);
-
-	return (status);
+	return (stat);
 }
-
-	
